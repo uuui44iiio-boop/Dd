@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>لوحة التحكم</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a0a;color:#e5e5e5;min-height:100vh;overflow-x:hidden}
+.top{background:#121212;padding:12px 16px;border-bottom:1px solid #252525;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+.top h1{font-size:15px;color:#00e68a;font-weight:600}
+.badge{font-size:11px;color:#777}.badge b{color:#00e68a}
+.wrap{display:grid;grid-template-columns:1fr 280px;gap:14px;padding:14px;max-width:1200px;margin:0 auto}
+@media(max-width:800px){.wrap{grid-template-columns:1fr;padding:10px}}
+.cam{background:#121212;border:1px solid #252525;border-radius:12px;overflow:hidden}
+#v{width:100%;height:min(55vh,420px);background:#000;object-fit:cover;display:block}
+.btns{padding:10px;display:flex;flex-wrap:wrap;gap:7px}
+button{background:#1c1c1c;border:1px solid #333;color:#ddd;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;min-height:40px}
+button:active{transform:scale(0.97)}
+button:hover{border-color:#00e68a}
+button.red{background:#2a1212;border-color:#5a2222}
+button.green{background:#0d2a1a;border-color:#1a5a3a;color:#00e68a}
+.side{display:flex;flex-direction:column;gap:12px}
+.box{background:#121212;border:1px solid #252525;border-radius:12px;padding:14px}
+.box h3{font-size:12px;color:#00e68a;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid #252525}
+.row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px}
+.row span:last-child{color:#999;direction:ltr;max-width:58%;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#log{height:140px;overflow-y:auto;background:#0c0c0c;border-radius:8px;padding:7px;font-size:10px;direction:ltr;text-align:left}
+.l{margin-bottom:2px;color:#555}.l.ok{color:#00e68a}.l.err{color:#ff5555}
+input,select{width:100%;background:#0c0c0c;border:1px solid #333;color:#ddd;padding:9px 10px;border-radius:7px;margin-bottom:7px;direction:ltr;font-size:13px}
+.admin{display:none;padding:14px;max-width:1200px;margin:0 auto}
+.admin.show{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px}
+.thumb{background:#121212;border:1px solid #252525;border-radius:10px;overflow:hidden;position:relative}
+.thumb img{width:100%;height:120px;object-fit:cover;display:block}
+.thumb .meta{padding:6px 8px;font-size:10px;color:#888}
+.thumb .del{position:absolute;top:4px;left:4px;background:#5a1515;border:none;color:#fff;width:24px;height:24px;border-radius:50%;font-size:12px;cursor:pointer}
+.login{max-width:320px;margin:80px auto;background:#121212;border:1px solid #252525;border-radius:14px;padding:24px;text-align:center}
+.login h2{color:#00e68a;margin-bottom:16px;font-size:18px}
+.hidden{display:none}
+#audioLevel{height:6px;background:#1a1a1a;border-radius:3px;margin-top:6px;overflow:hidden}
+#audioBar{height:100%;width:0;background:#00e68a;transition:width 0.1s}
+</style>
+</head>
+<body>
+
+<!-- الصفحة الرئيسية -->
+<div id="main">
+  <div class="top">
+    <h1>كاميرا + مايك مباشر</h1>
+    <div class="badge">الحالة: <b id="st">offline</b></div>
+  </div>
+
+  <div class="wrap">
+    <div class="cam">
+      <video id="v" autoplay playsinline muted></video>
+      <div class="btns">
+        <button class="green" onclick="startAll()">تشغيل كاميرا + مايك</button>
+        <button class="red" onclick="stopAll()">إيقاف الكل</button>
+        <button onclick="shot()">لقطة</button>
+        <button onclick="toggleMic()">كتم المايك</button>
+        <button onclick="startRec()">تسجيل فيديو</button>
+        <button class="red" onclick="stopRec()">إيقاف التسجيل</button>
+      </div>
+      <div style="padding:0 10px 10px">
+        <div style="font-size:11px;color:#666;margin-bottom:3px">مستوى المايك</div>
+        <div id="audioLevel"><div id="audioBar"></div></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="box">
+        <h3>معلومات الجهاز</h3>
+        <div class="row"><span>المتصفح</span><span id="ua">—</span></div>
+        <div class="row"><span>الجهاز</span><span id="pl">—</span></div>
+        <div class="row"><span>الشاشة</span><span id="sc">—</span></div>
+        <div class="row"><span>اللغة</span><span id="lg">—</span></div>
+        <div class="row"><span>الوقت</span><span id="tm">—</span></div>
+        <div class="row"><span>IP</span><span id="ip">...</span></div>
+      </div>
+
+      <div class="box">
+        <h3>الموقع</h3>
+        <div class="row"><span>خط العرض</span><span id="lat">—</span></div>
+        <div class="row"><span>خط الطول</span><span id="lon">—</span></div>
+        <div class="row"><span>الدقة</span><span id="ac">—</span></div>
+        <button style="width:100%;margin-top:4px" onclick="getLoc()">طلب الموقع</button>
+      </div>
+
+      <div class="box">
+        <h3>سجل</h3>
+        <div id="log"></div>
+      </div>
+
+      <div class="box">
+        <h3>رابط الصفحة</h3>
+        <input id="lnk" readonly>
+        <button style="width:100%" onclick="copyLink()">نسخ الرابط</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- لوحة الأدمن برمز 8989 -->
+<div id="admin" class="admin">
+  <div class="top">
+    <h1>لوحة المراقبة — 8989</h1>
+    <button class="red" onclick="logout()" style="padding:6px 12px;font-size:12px">خروج</button>
+  </div>
+  <div style="padding:14px">
+    <div class="box">
+      <h3>اللقطات المحفوظة (<span id="count">0</span>)</h3>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <button onclick="loadGallery()">تحديث</button>
+        <button class="red" onclick="clearAll()">حذف الكل</button>
+        <button onclick="exportData()">تصدير JSON</button>
+      </div>
+      <div class="grid" id="gallery"></div>
+    </div>
+    <div class="box" style="margin-top:14px">
+      <h3>آخر معلومات زائر</h3>
+      <pre id="lastInfo" style="font-size:11px;direction:ltr;text-align:left;color:#aaa;white-space:pre-wrap;max-height:200px;overflow:auto"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- شاشة الدخول -->
+<div id="loginScreen" class="login hidden">
+  <h2>دخول لوحة المراقبة</h2>
+  <input type="password" id="code" placeholder="أدخل الرمز" maxlength="8" style="text-align:center;font-size:18px;letter-spacing:4px">
+  <button class="green" style="width:100%;margin-top:8px" onclick="checkCode()">دخول</button>
+  <p style="font-size:11px;color:#555;margin-top:12px">الرمز: 8989</p>
+</div>
+
+<canvas id="c" class="hidden"></canvas>
+
+<script>
+const L = document.getElementById('log');
+let stream = null, recorder = null, chunks = [], micMuted = false, audioCtx = null, analyser = null, animId = null;
+
+function log(m, t='') {
+  const d = document.createElement('div');
+  d.className = 'l ' + t;
+  d.textContent = new Date().toLocaleTimeString() + ' | ' + m;
+  L.prepend(d);
+}
+function st(t){ document.getElementById('st').textContent = t; }
+
+// معلومات الجهاز
+document.getElementById('ua').textContent = (navigator.userAgent||'').slice(0,40)+'...';
+document.getElementById('pl').textContent = navigator.platform || navigator.userAgentData?.platform || '—';
+document.getElementById('sc').textContent = screen.width + 'x' + screen.height;
+document.getElementById('lg').textContent = navigator.language;
+document.getElementById('tm').textContent = new Date().toLocaleString();
+document.getElementById('lnk').value = location.href.split('#')[0];
+
+fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{
+  document.getElementById('ip').textContent = d.ip;
+  log('IP '+d.ip,'ok');
+  saveVisitor({ip:d.ip});
+}).catch(()=>{document.getElementById('ip').textContent='fail';log('IP fail','err')});
+
+// حفظ بيانات الزائر
+function saveVisitor(extra={}) {
+  const data = {
+    time: new Date().toISOString(),
+    ua: navigator.userAgent,
+    platform: navigator.platform,
+    screen: screen.width+'x'+screen.height,
+    lang: navigator.language,
+    ...extra
+  };
+  localStorage.setItem('lastVisitor', JSON.stringify(data));
+}
+
+// تشغيل كاميرا + مايك
+async function startAll() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: { echoCancellation: true, noiseSuppression: true }
+    });
+    const v = document.getElementById('v');
+    v.srcObject = stream;
+    v.muted = true; // الفيديو مكتوم عشان ما يصير صدى، المايك شغّال للتسجيل
+    st('live');
+    log('كاميرا + مايك شغّالين','ok');
+    startAudioMeter();
+    saveVisitor({cam:true});
+  } catch(e) {
+    log('رفض الإذن: '+e.message,'err');
+    st('denied');
+  }
+}
+
+function stopAll() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    document.getElementById('v').srcObject = null;
+    st('offline');
+    log('تم الإيقاف');
+    stopAudioMeter();
+  }
+  if (recorder && recorder.state !== 'inactive') recorder.stop();
+}
+
+// مؤشر مستوى المايك
+function startAudioMeter() {
+  if (!stream) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = audioCtx.createMediaStreamSource(stream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  src.connect(analyser);
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  function tick() {
+    analyser.getByteFrequencyData(data);
+    let sum = 0;
+    for (let i=0;i<data.length;i++) sum += data[i];
+    const avg = sum / data.length;
+    document.getElementById('audioBar').style.width = Math.min(100, avg*1.5) + '%';
+    animId = requestAnimationFrame(tick);
+  }
+  tick();
+}
+function stopAudioMeter() {
+  if (animId) cancelAnimationFrame(animId);
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  document.getElementById('audioBar').style.width = '0';
+}
+
+function toggleMic() {
+  if (!stream) return;
+  const tracks = stream.getAudioTracks();
+  if (tracks[0]) {
+    micMuted = !micMuted;
+    tracks[0].enabled = !micMuted;
+    log(micMuted ? 'المايك مكتوم' : 'المايك شغال','ok');
+  }
+}
+
+function shot() {
+  if (!stream) return log('شغّل الكاميرا أولاً','err');
+  const v = document.getElementById('v');
+  const c = document.getElementById('c');
+  c.width = v.videoWidth || 640;
+  c.height = v.videoHeight || 480;
+  c.getContext('2d').drawImage(v, 0, 0);
+  const dataUrl = c.toDataURL('image/jpeg', 0.85);
+  // حفظ في localStorage
+  const snaps = JSON.parse(localStorage.getItem('snaps') || '[]');
+  snaps.unshift({
+    id: Date.now(),
+    time: new Date().toLocaleString(),
+    img: dataUrl,
+    info: {
+      ip: document.getElementById('ip').textContent,
+      ua: navigator.userAgent.slice(0,60)
+    }
+  });
+  if (snaps.length > 40) snaps.pop(); // حد أقصى
+  localStorage.setItem('snaps', JSON.stringify(snaps));
+  // تنزيل أيضاً
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = 'shot_'+Date.now()+'.jpg';
+  a.click();
+  log('لقطة محفوظة','ok');
+}
+
+function startRec() {
+  if (!stream) return log('شغّل الكاميرا أولاً','err');
+  chunks = [];
+  const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') 
+    ? 'video/webm;codecs=vp9,opus' 
+    : 'video/webm';
+  recorder = new MediaRecorder(stream, { mimeType: mime });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'rec_'+Date.now()+'.webm';
+    a.click();
+    log('التسجيل محفوظ','ok');
+  };
+  recorder.start(1000);
+  log('بدأ التسجيل','ok');
+}
+
+function stopRec() {
+  if (recorder && recorder.state !== 'inactive') {
+    recorder.stop();
+    log('إيقاف التسجيل');
+  }
+}
+
+function getLoc() {
+  if (!navigator.geolocation) return log('المتصفح لا يدعم الموقع','err');
+  navigator.geolocation.getCurrentPosition(p => {
+    document.getElementById('lat').textContent = p.coords.latitude.toFixed(6);
+    document.getElementById('lon').textContent = p.coords.longitude.toFixed(6);
+    document.getElementById('ac').textContent = Math.round(p.coords.accuracy)+' م';
+    log('تم جلب الموقع','ok');
+    saveVisitor({lat:p.coords.latitude, lon:p.coords.longitude});
+  }, e => log('رفض الموقع: '+e.message,'err'), {enableHighAccuracy:true, timeout:15000});
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(location.href.split('#')[0]).then(()=>log('تم نسخ الرابط','ok'));
+}
+
+// ===== لوحة 8989 =====
+function checkCode() {
+  const code = document.getElementById('code').value.trim();
+  if (code === '8989') {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('admin').classList.add('show');
+    loadGallery();
+    const last = localStorage.getItem('lastVisitor');
+    document.getElementById('lastInfo').textContent = last ? JSON.stringify(JSON.parse(last), null, 2) : 'لا توجد بيانات';
+    log('دخول لوحة المراقبة','ok');
+  } else {
+    alert('الرمز خطأ');
+  }
+}
+
+function logout() {
+  document.getElementById('admin').classList.remove('show');
+  document.getElementById('main').style.display = 'block';
+  document.getElementById('code').value = '';
+}
+
+function loadGallery() {
+  const snaps = JSON.parse(localStorage.getItem('snaps') || '[]');
+  document.getElementById('count').textContent = snaps.length;
+  const g = document.getElementById('gallery');
+  g.innerHTML = '';
+  snaps.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'thumb';
+    d.innerHTML = `
+      <img src="${s.img}" alt="shot">
+      <button class="del" onclick="delSnap(${s.id})">×</button>
+      <div class="meta">${s.time}<br>${s.info?.ip||''}</div>
+    `;
+    g.appendChild(d);
+  });
+}
+
+function delSnap(id) {
+  let snaps = JSON.parse(localStorage.getItem('snaps') || '[]');
+  snaps = snaps.filter(s => s.id !== id);
+  localStorage.setItem('snaps', JSON.stringify(snaps));
+  loadGallery();
+}
+
+function clearAll() {
+  if (confirm('حذف كل اللقطات؟')) {
+    localStorage.removeItem('snaps');
+    loadGallery();
+  }
+}
+
+function exportData() {
+  const data = {
+    snaps: JSON.parse(localStorage.getItem('snaps') || '[]'),
+    lastVisitor: JSON.parse(localStorage.getItem('lastVisitor') || '{}')
+  };
+  const a = document.createElement('a');
+  a.href = 'data:application/json,' + encodeURIComponent(JSON.stringify(data, null, 2));
+  a.download = 'export_'+Date.now()+'.json';
+  a.click();
+}
+
+// دخول اللوحة عن طريق #8989 في الرابط
+if (location.hash === '#8989' || location.search.includes('admin=8989')) {
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// اختصار: اضغط 8989 بسرعة
+let keys = '';
+document.addEventListener('keydown', e => {
+  keys += e.key;
+  if (keys.length > 4) keys = keys.slice(-4);
+  if (keys === '8989') {
+    document.getElementById('main').style.display = 'none';
+    document.getElementById('loginScreen').classList.remove('hidden');
+    keys = '';
+  }
+});
+
+log('الصفحة جاهزة — اضغط 8989 أو أضف #8989 للرابط');
+</script>
+</body>
+</html>
